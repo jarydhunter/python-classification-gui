@@ -168,7 +168,6 @@ class mainFrame:
         CreateDisplay(window, save_dir, all_images, CURR_IMG, classes=classes, mode='copy')
         return window 
 
-    #TODO: implement adding a row and removing rows for classes, these functions were taken from my recipes manager project.
     def add_row(self):
         frame_class = tk.Frame(master=self.frame_classes)
         txt = tk.Entry(master=frame_class, width=50)
