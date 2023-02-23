@@ -43,7 +43,14 @@ class CreateDisplay:
             print("No more images to process")
             sys.exit()
         
-        self.display_image()
+        #TODO: Test this new error catching, make sure it skips the file if it
+        #can't open it
+        try:
+            self.display_image()
+        except:
+            msg = f"failed to read image {self.current_image}, skipping to next one"
+            tk.messagebox.showerror('Error', msg)
+
 
     def display_image(self):
         img = Image.open(self.current_image)
@@ -63,6 +70,7 @@ class mainFrame:
         self.classes = []
         self.src_dir = ''
         self.out_dir = ''
+        self.ilst = None
 
         # Title_frame
         title = 'Interactive labeling'
@@ -103,12 +111,12 @@ class mainFrame:
                             text='select image list',
                             width=24, height=2, fg='black')
         btn_ilst.grid(row=3, column=0)
-        lbl_ilst = tk.Label(master=frame_out, text='None')
+        lbl_ilst = tk.Label(master=frame_ilst, text='None')
         lbl_ilst.config(font=('Georgia', 24))
         lbl_ilst.grid(row=3, column=1)
         self.lbl_ilst = lbl_ilst
-        btn_out.bind("<Button>", 
-                     lambda e: self.get_dir(e, 'ilst'))
+        btn_ilst.bind("<Button>", 
+                     lambda e: self.get_file(e, 'ilst'))
 
         # input class names
         self.frame_classes = tk.Frame(master=self.frame)
@@ -141,9 +149,10 @@ class mainFrame:
         frame_title.grid(row=0, column=0)
         frame_src.grid(row=1, column=0)
         frame_out.grid(row=2, column=0)
-        self.frame_classes.grid(row=3, column=0)
-        frame_row.grid(row=4, column=0)
-        frame_start.grid(row=5, column=0)
+        frame_ilst.grid(row=3, column=0)
+        self.frame_classes.grid(row=4, column=0)
+        frame_row.grid(row=5, column=0)
+        frame_start.grid(row=6, column=0)
         self.frame.grid(row=0, column=0)
 
     def get_dir(self, event, attr):
@@ -154,44 +163,53 @@ class mainFrame:
         val = getattr(self, f'{attr}_dir')
         lbl = getattr(self, f'lbl_{attr}')
         lbl.config(text=f'Directory: {val}')
-        if self.out_dir:
+        lbl.config(font=('Georgia', 12))
+        if self.check_ready():
             self.btn_start.config(fg='green')
 
     def get_file(self, event, attr):
         """
         open an askopenfilename window and write to label the path of the chosen file.
         """
-        import pdb
-        pdb.set_trace()
-        setattr(self, f'{attr}', fd.askopenfilename(mustexist=True))
+        setattr(self, f'{attr}', fd.askopenfilename())
         val = getattr(self, f'{attr}')
         lbl = getattr(self, f'lbl_{attr}')
         lbl.config(text=f'File: {val}')
+        lbl.config(font=('Georgia', 12))
 
     def check_ready(self):
         """
         Check if all required inputs are there to set the start button to green.
         """
-        if not os.path.exists(self.out_dir):
+        if not os.path.exists(getattr(self, 'out_dir', '')):
             return False
-        elif not os.path.exists(self.src_dir):
+        elif not os.path.exists(getattr(self,  'src_dir', '')):
             return False
         return True
 
     def start(self, event):
         save_dir = self.out_dir
 
-        if self.image_list:
-            with open(self.image_list, 'r') as f:
-                all_images = [os.path.join(self.src_dir, bn) for bn in f.readlines()]
+        import pdb
+        pdb.set_trace()
+        if self.ilst:
+            with open(self.ilst, 'r') as f:
+                all_images = [os.path.join(self.src_dir, bn.strip()) for bn in f.readlines() if bn.strip() != '']
             for path in all_images:
                 if not os.path.exists(path):
-                    raise ValueError(f"Path {path} from image list"
-                                     f" {self.image_list} does not exist")
+                    msg = (f"Path {path} from image list {self.ilst} does"
+                           f" not exist")
+                    tk.messagebox.showerror('Error', msg)
+                    raise ValueError(msg)
         else:
             all_images = [os.path.join(self.src_dir, p) for p in os.listdir(self.src_dir)]
             print("Shuffling")
             random.shuffle(all_images)
+        if len(all_images) == 0:
+            msg = f"No images found in {self.src_dir}"
+            tk.messagebox.showerror('Error', msg)
+            raise ValueError(msg)
+
         CURR_IMG = all_images[0]
 
         classes = []
