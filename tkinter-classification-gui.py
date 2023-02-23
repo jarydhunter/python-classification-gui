@@ -10,7 +10,7 @@ from tkinter import filedialog as fd
 
 
 class CreateDisplay:
-    def __init__(self, master, save_dir, images, current_image, classes="good", mode="save"):
+    def __init__(self, master, save_dir, images, current_image, classes="good", mode="copy"):
         self.master = master
         self.count = 0
         self.save_dir = save_dir
@@ -97,6 +97,19 @@ class mainFrame:
         btn_out.bind("<Button>", 
                      lambda e: self.get_dir(e, 'out'))
         
+        # Button to select image list
+        frame_ilst = tk.Frame(master=self.frame)
+        btn_ilst = tk.Button(master=frame_ilst,
+                            text='select image list',
+                            width=24, height=2, fg='black')
+        btn_ilst.grid(row=3, column=0)
+        lbl_ilst = tk.Label(master=frame_out, text='None')
+        lbl_ilst.config(font=('Georgia', 24))
+        lbl_ilst.grid(row=3, column=1)
+        self.lbl_ilst = lbl_ilst
+        btn_out.bind("<Button>", 
+                     lambda e: self.get_dir(e, 'ilst'))
+
         # input class names
         self.frame_classes = tk.Frame(master=self.frame)
         self.frame_subtitle = tk.Label(master=self.frame_classes, text='class names')
@@ -133,7 +146,6 @@ class mainFrame:
         frame_start.grid(row=5, column=0)
         self.frame.grid(row=0, column=0)
 
-
     def get_dir(self, event, attr):
         """
         open an askdirectory window and write to label the path of the directory chosen.
@@ -145,14 +157,41 @@ class mainFrame:
         if self.out_dir:
             self.btn_start.config(fg='green')
 
+    def get_file(self, event, attr):
+        """
+        open an askopenfilename window and write to label the path of the chosen file.
+        """
+        import pdb
+        pdb.set_trace()
+        setattr(self, f'{attr}', fd.askopenfilename(mustexist=True))
+        val = getattr(self, f'{attr}')
+        lbl = getattr(self, f'lbl_{attr}')
+        lbl.config(text=f'File: {val}')
+
+    def check_ready(self):
+        """
+        Check if all required inputs are there to set the start button to green.
+        """
+        if not os.path.exists(self.out_dir):
+            return False
+        elif not os.path.exists(self.src_dir):
+            return False
+        return True
 
     def start(self, event):
         save_dir = self.out_dir
 
-        all_images = [os.path.join(self.src_dir, p) for p in os.listdir(self.src_dir)]
-
-        print("Shuffling")
-        random.shuffle(all_images)
+        if self.image_list:
+            with open(self.image_list, 'r') as f:
+                all_images = [os.path.join(self.src_dir, bn) for bn in f.readlines()]
+            for path in all_images:
+                if not os.path.exists(path):
+                    raise ValueError(f"Path {path} from image list"
+                                     f" {self.image_list} does not exist")
+        else:
+            all_images = [os.path.join(self.src_dir, p) for p in os.listdir(self.src_dir)]
+            print("Shuffling")
+            random.shuffle(all_images)
         CURR_IMG = all_images[0]
 
         classes = []
@@ -168,7 +207,6 @@ class mainFrame:
         CreateDisplay(window, save_dir, all_images, CURR_IMG, classes=classes, mode='copy')
         return window 
 
-    #TODO: implement adding a row and removing rows for classes, these functions were taken from my recipes manager project.
     def add_row(self):
         frame_class = tk.Frame(master=self.frame_classes)
         txt = tk.Entry(master=frame_class, width=50)
