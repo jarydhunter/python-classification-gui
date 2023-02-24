@@ -25,9 +25,7 @@ class CreateDisplay:
         buttons = [tk.Button(self.master, text=self.classes[i], command=lambda i=i: self.change_image(self.classes[i])).grid(row=1, column=i) for i in range(self.col)]
 
     def change_image(self, class_):
-
-        self.count += 1
-
+        # Move the current image to the appropriate class directory
         path = os.path.basename(self.current_image)
 
         if self.mode == "move":
@@ -36,20 +34,23 @@ class CreateDisplay:
             shutil.copy(self.current_image, os.path.join(self.save_dir, class_, path)) 
         else:
             raise ValueError('Mode must be set to "move" or "copy"')
-        
-        try:
-            self.current_image = self.images[self.count]
-        except IndexError:
-            print("No more images to process")
-            sys.exit()
-        
-        #TODO: Test this new error catching, make sure it skips the file if it
-        #can't open it
-        try:
-            self.display_image()
-        except:
-            msg = f"failed to read image {self.current_image}, skipping to next one"
-            tk.messagebox.showerror('Error', msg)
+
+        # Update the current image if there are no more images exit.
+        while True:
+            self.count += 1
+            try:
+                self.current_image = self.images[self.count]
+            except IndexError:
+                msg = "No more images to classify"
+                tk.messagebox.showinfo('Complete', msg, parent=self.master)
+                sys.exit()
+            try:
+                self.display_image()
+            except:
+                msg = f"failed to read image {self.current_image}, skipping to next one"
+                tk.messagebox.showerror('Error', msg, parent=self.master)
+                continue
+            break
 
 
     def display_image(self):
@@ -190,8 +191,6 @@ class mainFrame:
     def start(self, event):
         save_dir = self.out_dir
 
-        import pdb
-        pdb.set_trace()
         if self.ilst:
             with open(self.ilst, 'r') as f:
                 all_images = [os.path.join(self.src_dir, bn.strip()) for bn in f.readlines() if bn.strip() != '']
